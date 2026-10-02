@@ -1,0 +1,48 @@
+name: Docker Security Scan
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  scan:
+    runs-on: ubuntu-latest
+
+    permissions:
+      security-events: write
+      contents: read
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Build image
+        run: docker build -t security-demo:${{ github.sha }} .
+
+      - name: Run Trivy and produce SARIF report
+        uses: aquasecurity/trivy-action@0.18.0
+        with:
+          image-ref: security-demo:${{ github.sha }}
+          format: sarif
+          output: trivy-results.sarif
+          severity: CRITICAL,HIGH
+
+      - name: Upload SARIF to GitHub Security tab
+        uses: github/codeql-action/upload-sarif@v3
+        if: always()
+        with:
+          sarif_file: trivy-results.sarif
+
+      - name: Run Trivy JSON scan for policy gate
+        uses: aquasecurity/trivy-action@0.18.0
+        with:
+          image-ref: security-demo:${{ github.sha }}
+          format: json
+          output: trivy-results.json
+          severity: CRITICAL,HIGH
+
+      - name: Enforce policy gate
+        run: |
+          bash policy_gate.sh trivy-results.json policy.yaml

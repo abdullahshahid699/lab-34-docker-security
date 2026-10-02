@@ -1,0 +1,6 @@
+fail_on:
+  critical_count_exceeds: 0
+  high_count_exceeds: 100
+warn_on:
+  medium_count_exceeds: 50
+report_label: "Container Security Policy"
